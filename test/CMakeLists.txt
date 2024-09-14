@@ -56,50 +56,39 @@ endif()
 
 
 
-# If local path to testfiles is defined don't download 
-IF(EXISTS  ${CMAKE_SOURCE_DIR}/fix)
+set( CRTM_COEFFS_BRANCH "fix_REL-3.1.1.2" )
+set( checksum "58e0a5c698a438a31dc4914fcda39846") # MD5SUM of fix_REL-3.1.1.2.tgz
+set( DOWNLOAD_BASE_URL "https://bin.ssec.wisc.edu/pub/s4/CRTM/")
+set(test_files_dirname ${CRTM_COEFFS_BRANCH}.tgz) 
+set( CRTM_COEFFS_PATH ${CMAKE_BINARY_DIR}/test_data/${PROJECT_VERSION} )
+set( DOWNLOAD_DEST "${CRTM_COEFFS_PATH}/${test_files_dirname}")
+file( MAKE_DIRECTORY ${CRTM_COEFFS_PATH} )
+
+message (STATUS "downloading crtm binary files")
+execute_process(
+    COMMAND bash ../Get_CRTM_Binary_Files.sh
+        --http_base_path ${DOWNLOAD_BASE_URL}
+        --crtm_coeffs_branch ${CRTM_COEFFS_BRANCH}
+        --crtm_source_dir ${CMAKE_SOURCE_DIR}
+        --untar_dest ${CRTM_COEFFS_PATH}
+        --download_location ${DOWNLOAD_DEST}
+        --checksum ${checksum}
+    ERROR_VARIABLE stderr_output
+    RESULT_VARIABLE result
+)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Failed to download CRTM coefficients: ${stderr_output}")
+endif()
+
+message (STATUS "Downloaded crtm binary files: ${stderr_output}")
+
+
+# Update the coefficients path if they are stored with the CRTM source.
+IF( EXISTS ${CMAKE_SOURCE_DIR}/fix )
   set( CRTM_COEFFS_PATH ${CMAKE_SOURCE_DIR} )
-  message(STATUS "use LOCAL_PATH_JEDI_TESTFILES: ${CRTM_COEFFS_PATH}/fix")
-  message("Using existing local fix directory instead of downloading.")
+  message( STATUS "use LOCAL_PATH_JEDI_TESTFILES: ${CRTM_COEFFS_PATH}/fix" )
+  message( "Using existing local fix directory instead of downloading." )
   set( CRTM_COEFFS_BRANCH "" )
-
-else() # Download CRTM coefficients
-  set( CRTM_COEFFS_BRANCH_PREFIX "" )  #preserves the structure of the paths that have been used in jedi previously vs the local path above
-  set( CRTM_COEFFS_BRANCH "fix_REL-3.1.1.2" ) 
-  
-  set(CRTM_COEFFS_PATH ${CMAKE_BINARY_DIR}/test_data/${PROJECT_VERSION})
-  file(MAKE_DIRECTORY ${CRTM_COEFFS_PATH})
-  
-  set(DOWNLOAD_BASE_URL "https://bin.ssec.wisc.edu/pub/s4/CRTM/")
-  set(test_files_dirname ${CRTM_COEFFS_BRANCH}.tgz) 
-  set(checksum "58e0a5c698a438a31dc4914fcda39846") # MD5SUM of fix_REL-3.1.1.2.tgz
-  
-  set(DOWNLOAD_URL "${DOWNLOAD_BASE_URL}/${test_files_dirname}")
-  set(DOWNLOAD_DEST "${CRTM_COEFFS_PATH}/${test_files_dirname}")
-  
-  # Download during CMake configure step
-  message(STATUS "Downloading CRTM coeffs files from: ${DOWNLOAD_URL} to ${DOWNLOAD_DEST}")
-  file(DOWNLOAD ${DOWNLOAD_URL} ${DOWNLOAD_DEST}
-    EXPECTED_MD5 ${checksum}
-    SHOW_PROGRESS)
-
-  # -- UNTAR -- 
-  
-  # Define the directory to untar into
-  set(UNTAR_DEST "${CMAKE_BINARY_DIR}/test_data/${PROJECT_VERSION}")
-	message(STATUS "Checking if ${UNTAR_DEST}/${CRTM_COEFFS_BRANCH} already exists...")
-  # Only untar if the CHECK_PATH does not exist
-  if(NOT EXISTS ${UNTAR_DEST}/${CRTM_COEFFS_BRANCH}/)
-		message(STATUS "Untarring the downloaded file (~2 minutes) to ${UNTAR_DEST}")
-    execute_process(COMMAND tar -xzf ${DOWNLOAD_DEST} -C ${UNTAR_DEST}
-                    RESULT_VARIABLE result
-                    OUTPUT_QUIET ERROR_QUIET)
-    if(NOT result EQUAL 0)
-      message(FATAL_ERROR "Failed to untar the file.")
-    endif()
-  else()
-    message(STATUS "Files have already been untarred. Skipping.")
-  endif()
 endif()
 
 
@@ -599,6 +588,6 @@ SpcCoeff/Little_Endian/ssu_n14.SpcCoeff.bin
 
 # Symlink all CRTM files
 # Version 3
-CREATE_SYMLINK_FILENAME( ${CRTM_COEFFS_PATH}/${CRTM_COEFFS_BRANCH_PREFIX}/${CRTM_COEFFS_BRANCH}/fix
+CREATE_SYMLINK_FILENAME( ${CRTM_COEFFS_PATH}/${CRTM_COEFFS_BRANCH}/fix
                          ${CMAKE_CURRENT_BINARY_DIR}/testinput
                          ${crtm_test_input} )
